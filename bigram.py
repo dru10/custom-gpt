@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from attention import Head
+from attention import MultiHeadAttention
 
 # Hyperparameters
 batch_size = 32
@@ -13,6 +13,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 eval_interval = 500
 eval_iters = 200
 n_embd = 32
+n_heads = 4
 
 # Seed
 seed = 1337
@@ -67,7 +68,7 @@ class BigramLanguageModel(nn.Module):
         super().__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)
-        self.sa_head = Head(n_embd)
+        self.sa_heads = MultiHeadAttention(n_heads, n_embd // n_heads)
         self.lm_head = nn.Linear(n_embd, vocab_size)
 
     def forward(self, idx, targets=None):
@@ -78,7 +79,7 @@ class BigramLanguageModel(nn.Module):
             torch.arange(T, device=device)
         )  # (T, C)
         x = token_emb + pos_emb  # (B, T, C)
-        x = self.sa_head(x)
+        x = self.sa_heads(x)
         logits = self.lm_head(x)  # (B,T, vocab_size)
 
         if targets is None:
