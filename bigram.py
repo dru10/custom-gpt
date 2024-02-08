@@ -7,14 +7,15 @@ from forward import Block
 
 # Hyperparameters
 batch_size = 32
-block_size = 8
+block_size = 128
 max_iter = 5000
-learning_rate = 1e-3
+learning_rate = 3e-4
 device = "cuda" if torch.cuda.is_available() else "cpu"
 eval_interval = 500
 eval_iters = 200
-n_embd = 32
-n_heads = 4
+n_embd = 384
+n_heads = 6
+n_layer = 6
 
 # Seed
 seed = 1337
@@ -70,11 +71,9 @@ class BigramLanguageModel(nn.Module):
         self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)
         self.blocks = nn.Sequential(
-            Block(n_embd, n_heads),
-            Block(n_embd, n_heads),
-            Block(n_embd, n_heads),
-            nn.LayerNorm(n_embd),
+            *[Block(n_embd, n_heads) for _ in range(n_layer)]
         )
+        self.layer_norm = nn.LayerNorm(n_embd)
         self.lm_head = nn.Linear(n_embd, vocab_size)
 
     def forward(self, idx, targets=None):
@@ -86,6 +85,7 @@ class BigramLanguageModel(nn.Module):
         )  # (T, C)
         x = token_emb + pos_emb  # (B, T, C)
         x = self.blocks(x)
+        x = self.layer_norm(x)
         logits = self.lm_head(x)  # (B,T, vocab_size)
 
         if targets is None:

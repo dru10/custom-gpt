@@ -2,6 +2,8 @@ import torch.nn as nn
 
 from attention import MultiHeadAttention
 
+dropout = 0.2
+
 
 class FeedForward(nn.Module):
     """Linear layer followed by ReLU"""
@@ -13,6 +15,7 @@ class FeedForward(nn.Module):
             nn.Linear(n_embd, self.multiplier * n_embd),
             nn.ReLU(),
             nn.Linear(self.multiplier * n_embd, n_embd),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x):

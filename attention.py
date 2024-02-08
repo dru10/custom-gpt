@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-n_embd = 32
-block_size = 8
+n_embd = 384
+block_size = 128
+dropout = 0.2
 
 
 class Head(nn.Module):
@@ -17,6 +18,7 @@ class Head(nn.Module):
         self.register_buffer(
             "tril", torch.tril(torch.ones(block_size, block_size))
         )
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         B, T, C = x.shape
@@ -28,6 +30,7 @@ class Head(nn.Module):
         wei = q @ k.transpose(-2, -1) * C**-0.5  # BTC @ BCT -> BTT
         wei = wei.masked_fill(self.tril[:T, :T] == 0, float("-inf"))
         wei = F.softmax(wei, dim=-1)  # BTT
+        wei = self.dropout(wei)
 
         out = wei @ v  # BTC
         return out
@@ -40,8 +43,9 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
         self.proj = nn.Linear(n_embd, n_embd)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         out = torch.cat([h(x) for h in self.heads], dim=-1)
-        out = self.proj(out)
+        out = self.dropout(self.proj(out))
         return out
